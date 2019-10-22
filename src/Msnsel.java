@@ -31,46 +31,25 @@ import java.util.LinkedList;
  * Minesweeper Solver
  * Created by Patrick Stillhart on 25.12.2015.
  */
-public class MineSweeperSolver {
+public class Msnsel {
 
     public static void main(String[] args) {
-        new MineSweeperSolver();
+        new Msnsel();
     }
 
-    private Board board;
+    private VirtualBoard board;
     private State[][] field;
 
-    public MineSweeperSolver() {
+    public Msnsel() {
 
         try {
-
-            // Get the number of mines from the user
-            int countMines = getUserInput("Enter the amount of mines");
-
-            // Initialize the board
-            board = new Board(countMines);
+            board = new VirtualBoard();
             field = board.getField();
-
-            do {
-
-                // Just open some fields
-                board.open(0, 0);
-                board.open(0, board.getCountRow() - 1);
-                board.open(board.getCountColumn() - 1, 0);
-                board.open(board.getCountColumn() - 1, board.getCountRow() - 1);
-
-                // Solve the game
-                solver();
-
-                // move mouse back
-                board.end();
-
-            } while (getUserInput("\nType 1 for another game") == 1 && board.restart());
-
         } catch (Board.BoardException e) {
-            System.err.println(e.getMessage());
+            e.printStackTrace();
         }
-
+        // Solve the game
+                solver();
     }
 
     /**
@@ -145,8 +124,10 @@ public class MineSweeperSolver {
 
             }
 
-        } catch (Board.BoardException | InterruptedException e) {
+        } catch (InterruptedException e) {
             System.err.println(e.getMessage());
+        } catch (VirtualBoard.BoardException e) {
+            e.printStackTrace();
         }
 
     }

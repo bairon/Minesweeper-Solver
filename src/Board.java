@@ -65,54 +65,17 @@ public class Board {
     static final int BLOCK_FLAG = -11636008;
     static final int BLOCK_MINE_EXPLODED = -12105399;
 
-    private Robot robot;
+    public Robot robot;
 
-    private Rectangle boardRect;
-    private BufferedImage board;
-    private Point clickMultiplier, initialMousePosition;
+    public Rectangle boardRect;
+    public BufferedImage board;
+    public Point clickMultiplier, initialMousePosition;
 
-    private int countColumn, countRow, countMines;
-    private State[][] field;
+    public int countColumn, countRow, countMines;
+    public State[][] field;
 
     public Board(int countMines) throws BoardException {
 
-        try {
-            robot = new Robot();
-            // Determine where the game is
-            // Union together the bounds of each screen for screenshot
-            Rectangle screenRect = new Rectangle(0, 0, 0, 0);
-            for (GraphicsDevice gd : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
-                screenRect = screenRect.union(gd.getDefaultConfiguration().getBounds());
-            }
-            BufferedImage capture = robot.createScreenCapture(screenRect);
-            Point start = findZero(capture);
-            if (start == null) throw new BoardException("A Game? ... Computer says no");
-
-            // Find the length and height of the game (in block count)
-            countColumn = calculateCountColumn(capture, start) + 1;
-            countRow = calculateCountRow(capture, start);
-            if (countColumn == 0 || countRow == 0) throw new BoardException("What kind of sorcery is this?");
-
-            // Mirror the game internally
-            field = new State[countColumn][countRow];
-            for (State[] row : field) Arrays.fill(row, State.BLOCK_CLOSED);
-
-            // Set the amount of mines
-            this.countMines = countMines;
-
-            // Future screenshots only need to capture the game itself
-            boardRect = new Rectangle(start.x, start.y, countColumn * BLOCK_SIDE, countRow * BLOCK_SIDE);
-            board = robot.createScreenCapture(boardRect);
-
-            // Since the original screenshot won't be here anymore we need a multiplier for the access via mouse click
-            clickMultiplier = new Point(start.x + BLOCK_SIDE / 2, start.y + BLOCK_SIDE / 2);
-
-            // Get the mouse position when the process starts, to reset it in the end
-            initialMousePosition = new Point(MouseInfo.getPointerInfo().getLocation().x, MouseInfo.getPointerInfo().getLocation().y);
-
-        } catch (AWTException e) {
-            e.printStackTrace();
-        }
 
     }
 
