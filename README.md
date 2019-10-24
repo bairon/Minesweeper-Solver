@@ -6,7 +6,7 @@ This is a solver to solve a minesweeper game for you. I mean, it is too tedious 
  
 It's completely self-contained and works pretty good. In the current form it solves only games from [Minesweeper X]
 (http://www.minesweeper.info/downloads/MinesweeperX.html) with the "vistabluemineskin" skin. This is because it analyzes the screenshot pixel by pixel comparing the color of blocks with the ones in the skin. 
-You can change it, though. CHnage the static color variables in Board.java. I even left the "debug" method in, which will print the correct color.
+You can change it, though. CHnage the static color variables in MBoard.java. I even left the "debug" method in, which will print the correct color.
  
 The solving process involves two solving strategies. 
  1. Neighbours, solve field by field 

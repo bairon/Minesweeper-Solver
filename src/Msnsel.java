@@ -37,19 +37,11 @@ public class Msnsel {
         new Msnsel();
     }
 
-    private VirtualBoard board;
-    private State[][] field;
+    private Board board = new MBoard(11);
 
     public Msnsel() {
 
-        try {
-            board = new VirtualBoard();
-            field = board.getField();
-        } catch (Board.BoardException e) {
-            e.printStackTrace();
-        }
-        // Solve the game
-                solver();
+        solver();
     }
 
     /**
@@ -100,13 +92,13 @@ public class Msnsel {
                     board.refresh();
 
                     if (reruns < 3) reruns++;
-                    else if (checkSolved()) throw board.new BoardException("\nWOW... I rate this game a solid 5 / 7");
+                    else if (checkSolved()) throw new BoardException("\nWOW... I rate this game a solid 5 / 7");
                     else {
 
                         if (!triedTank) {
                             tankSolver();
                             triedTank = true;
-                        } else throw board.new BoardException("\nThe computer didn't do anything no more");
+                        } else throw new BoardException("\nThe computer didn't do anything no more");
 
                     }
                 }
@@ -117,7 +109,7 @@ public class Msnsel {
                     for (int y = 0; y < board.getCountRow(); y++) {
 
                         // Only solve fields with "numbers"
-                        if (field[x][y].getVal() > 0) solveSingle(x, y);
+                        if (board.getField()[x][y].getVal() > 0) solveSingle(x, y);
 
                     }
                 }
@@ -125,8 +117,8 @@ public class Msnsel {
             }
 
         } catch (InterruptedException e) {
-            System.err.println(e.getMessage());
-        } catch (VirtualBoard.BoardException e) {
+            e.printStackTrace();
+        } catch (BoardException e) {
             e.printStackTrace();
         }
 
@@ -144,18 +136,18 @@ public class Msnsel {
         if (countClosed == 0) return;
 
         int countAlreadyFlagged = getSurroundingByType(x, y, State.BLOCK_FLAG);
-        int countMinesAround = field[x][y].getVal();
+        int countMinesAround = board.getVal(x, y);
 
         // First: flag as much as we can
         if (countMinesAround == countClosed + countAlreadyFlagged) {
-            System.out.println("  Flag: " + field[x][y].getVal() + " at (" + (x + 1) + "/" + (y + 1) + ")");
+            System.out.println("  Flag: " + board.getVal(x, y) + " at (" + (x + 1) + "/" + (y + 1) + ")");
             board.flagSurrounding(x, y);
             countAlreadyFlagged = getSurroundingByType(x, y, State.BLOCK_FLAG);
         }
 
         // Second: open the ones around
         if (countMinesAround == countAlreadyFlagged) {
-            System.out.println("  Open: " + field[x][y].getVal() + " at (" + (x + 1) + "/" + (y + 1) + ")");
+            System.out.println("  Open: " + board.getVal(x, y) + " at (" + (x + 1) + "/" + (y + 1) + ")");
             board.openSurrounding(x, y);
         }
 
