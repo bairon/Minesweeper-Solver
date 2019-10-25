@@ -29,23 +29,49 @@ SOFTWARE.
  */
 public enum State {
 
-    BLOCK_MINE_EXPLODED(-3),
-    BLOCK_CLOSED(-2),
-    BLOCK_FLAG(-1),
-    BLOCK_EMPTY(0),
-    BLOCK_ONE(1),
-    BLOCK_TWO(2),
-    BLOCK_THREE(3),
-    BLOCK_FOUR(4),
-    BLOCK_FIVE(5),
-    BLOCK_SIX(6),
-    BLOCK_SEVEN(7),
-    BLOCK_EIGHT(8);
+    BLOCK_MINE_EXPLODED(-3, 9999999),
+    BLOCK_CLOSED(-2, -12111845),
+    BLOCK_FLAG(-1, -16052720),
+    BLOCK_EMPTY(0, -13361904),
+    BLOCK_ONE(1, -16744961),
+    BLOCK_TWO(2, -10926031, -10067906),
+    BLOCK_THREE(3, -5963263, -8169152),
+    BLOCK_FOUR(4, -3223602),
+    BLOCK_FIVE(5, 9999999),
+    BLOCK_SIX(6, 9999999),
+    BLOCK_SEVEN(7, 9999999),
+    BLOCK_EIGHT(8, 9999999),
+    OPEN_ME(9, 9999999),
+    FLAG_ME(10, 9999999);
 
+    private int[] rgb;
     private int val;
 
-    State(int val) {
-        this.val = val;
+    State(int val, int ... rgb) {
+        this.val = val;this.rgb = rgb;
+    }
+
+    public static State fromRGB(int rgb) {
+        State closest = null;
+        double closestDiff = 0;
+        int red = (rgb >> 16) & 0xff;
+        int green = (rgb >> 8) & 0xff;
+        int blue = (rgb) & 0xff;
+        for (State state : values()) {
+            for (int statergb : state.rgb) {
+                int red2 = (statergb >> 16) & 0xff;
+                int green2 = (statergb >> 8) & 0xff;
+                int blue2 = (statergb) & 0xff;
+
+                double diff = Math.sqrt(Math.pow(red - red2, 2) + Math.pow(green - green2, 2) + Math.pow(blue - blue2, 2));
+                if ( closest == null || diff < closestDiff) {
+                    closest = state;
+                    closestDiff = diff;
+                }
+            }
+        }
+        //System.out.println("Diff: " + closestDiff);
+        return closest;
     }
 
     public int getVal() {

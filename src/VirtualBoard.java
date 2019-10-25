@@ -37,7 +37,7 @@ public class VirtualBoard  {
     private int countMines;
     private State[][] field;
 
-    public VirtualBoard() throws MBoard.BoardException {
+    public VirtualBoard() throws BoardException {
         countColumn = 6;
         countRow = 8;
         countMines = 11;

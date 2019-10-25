@@ -28,6 +28,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 /**
@@ -39,51 +40,65 @@ import java.util.Arrays;
  * The images used are 1 pixel high and 16 pixel wide - they have a top offset of 3px
  */
 public class MBoard implements Board {
-
-    public MBoard(int mines) {
-        this.countMines = mines;
+    public static void main(String[] args) throws BoardException, AWTException, IOException {
+        MBoard b = new MBoard(11, 6, 8);
+        b.refresh();
+        System.out.println(b.toString());
     }
 
-    static final int BLOCK_SIDE = 16;
-    // The values are the RGB code of the pixel row on 3
-    static final int[] BLOCK_CLOSED = {-11765043, -11833638, -10386462, -10649116, -10911771, -10649373, -10649372, -10649372, -10714909, -10781215, -10781215, -10847520, -11044645, -11242793, -11570975, -14076059};
+    public void printValues() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < countRow; ++i) {
+            for (int j = 0; j < countColumn; ++j) {
+                int x = j * BLOCK_SIDE_X + BLOCK_SIDE_X / 2 + (j >= 4 ? 1 : 0);
+                int y = i * BLOCK_SIDE_Y + BLOCK_SIDE_Y / 2;
+                sb.append(board.getRGB(x, y));
+                sb.append(" ");// + x + "," + y + "  ");
+            }
+            sb.append("\n");
+        }
+        System.out.println(sb.toString());
 
-    // The value is the RGB value of the first pixel on row 3
-    static final int BLOCK_EMPTY = -9206408;
-    static final int BLOCK_ONE = -8749954;
-    static final int BLOCK_TWO = -8223611;
-    static final int BLOCK_THREE = -7565424;
-    static final int BLOCK_FOUR = -6578271;
-    static final int BLOCK_FIVE = -6051925;
-    static final int BLOCK_SIX = -11447725;
-    static final int BLOCK_SEVEN = -10987430;
-    static final int BLOCK_EIGHT = -10263194;
-    static final int BLOCK_FLAG = -11636008;
-    static final int BLOCK_MINE_EXPLODED = -12105399;
+    }
+
+    private String rgbtostr(int rgb) {
+        int red = (rgb >> 16) & 0xff;
+        int green = (rgb >> 8) & 0xff;
+        int blue = (rgb) & 0xff;
+        return String.format("(%s,%s,%s)", red, green, blue);
+    }
+
+    static final int BLOCK_SIDE_X = 18;
+    static final int BLOCK_SIDE_Y = 20;
+    // The values are the RGB code of the pixel row on 3
 
     public Robot robot;
 
     public Rectangle boardRect;
     public BufferedImage board;
-    public Point clickMultiplier, initialMousePosition;
 
     public int countColumn, countRow, countMines;
     public State[][] field;
 
-    /**
-     * Restarts the game
-     * @return true if successful
-     */
-    public boolean restart() {
-        robot.mouseMove(clickMultiplier.x, clickMultiplier.y - BLOCK_SIDE / 2);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-
-        robot.keyPress(KeyEvent.VK_F2);
-        robot.keyRelease(KeyEvent.VK_F2);
-
+    public MBoard(int mines, int rows, int columns) throws AWTException, BoardException, IOException {
+        this.countMines = mines;
+        this.countRow = rows;
+        this.countColumn = columns;
+        restart();
+    }
+    public boolean restart() throws AWTException, BoardException, IOException {
+        field = new State[countColumn][countRow];
         for (State[] row : field) Arrays.fill(row, State.BLOCK_CLOSED);
-
+        robot = new Robot();
+        Rectangle screenRect = new Rectangle(0, 0, 0, 0);
+        for (GraphicsDevice gd : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            screenRect = screenRect.union(gd.getDefaultConfiguration().getBounds());
+        }
+        BufferedImage capture = robot.createScreenCapture(screenRect);
+        Point start = findZero(capture);
+        if (start == null) throw new BoardException("A Game? ... Computer says no");
+        boardRect = new Rectangle(start.x, start.y, countColumn * BLOCK_SIDE_X, countRow * BLOCK_SIDE_Y);
+        board = robot.createScreenCapture(boardRect);
         return true;
     }
 
@@ -100,15 +115,15 @@ public class MBoard implements Board {
 
         board = robot.createScreenCapture(boardRect);
 
-        for (int x = 0; x < countColumn; x++) {
-            for (int y = 0; y < countRow; y++) {
+        for (int y = 0; y < countRow; y++) {
+            for (int x = 0; x < countColumn; x++) {
 
                 // we'll only check the ones who were closed in the last screenshot
-                tmp = field[x][y];
-                if (tmp == State.BLOCK_CLOSED) {
+                //tmp = field[x][y];
+                //if (tmp == State.BLOCK_CLOSED) {
                     field[x][y] = read(x, y);
-                    if (field[x][y] != tmp) change = true;
-                } else if (tmp == State.BLOCK_MINE_EXPLODED) throw new BoardException("Well... there was a mine at (" + (x + 1) + "/" + (y + 1) + ")");
+                //    if (field[x][y] != tmp) change = true;
+                //} else if (tmp == State.BLOCK_MINE_EXPLODED) throw new BoardException("Well... there was a mine at (" + (x + 1) + "/" + (y + 1) + ")");
             }
         }
 
@@ -123,9 +138,11 @@ public class MBoard implements Board {
      * @param y you seriously should understand it
      */
     public void open(int x, int y) {
-        robot.mouseMove(clickMultiplier.x + x * BLOCK_SIDE, clickMultiplier.y + y * BLOCK_SIDE);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        if (this.getField(x, y) == State.BLOCK_CLOSED) {
+            field[x][y] = State.OPEN_ME;
+            System.out.println(this);
+            throw new EndMoveException();
+        }
     }
 
     /**
@@ -135,10 +152,25 @@ public class MBoard implements Board {
      * @param y you seriously should understand it
      */
     public void openSurrounding(int x, int y) {
-        robot.mouseMove(clickMultiplier.x + x * BLOCK_SIDE, clickMultiplier.y + y * BLOCK_SIDE);
-        robot.mousePress(InputEvent.BUTTON2_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
+        if (y > 0) {
+            if (x > 0) open(x - 1, y - 1);    // top ■□□
+            open(x, y - 1);    // top □■□
+            if (x < field.length - 1) open(x + 1, y - 1);  // top □□■
+        }
 
+        if (x > 0) open(x - 1, y);  // middle ■□□
+        if (x + 1 < field.length - 1) open(x + 1, y); // middle □□■
+
+        if (y + 1 < field[0].length - 1) {
+            if (x > 0) open(x - 1, y + 1);  // bottom ■□□
+            open(x, y + 1);    // bottom □■□
+            if (x < field.length - 1) open(x + 1, y + 1); // bottom □□■
+        }
+    }
+
+    @Override
+    public State getField(int x, int y) {
+        return field[x][y];
     }
 
     /**
@@ -148,12 +180,11 @@ public class MBoard implements Board {
      * @param y you seriously should understand it
      */
     public void flag(int x, int y) {
-        if (field[x][y] != State.BLOCK_CLOSED) return;
-        field[x][y] = State.BLOCK_FLAG;
-
-        robot.mouseMove(clickMultiplier.x + x * BLOCK_SIDE, clickMultiplier.y + y * BLOCK_SIDE);
-        robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+        if (this.getField(x, y) == State.BLOCK_CLOSED) {
+            field[x][y] = State.FLAG_ME;
+            System.out.println(this);
+            throw new EndMoveException();
+        }
     }
 
     /**
@@ -177,7 +208,11 @@ public class MBoard implements Board {
             flag(x, y + 1);    // bottom □■□
             if (x < field.length - 1) flag(x + 1, y + 1); // bottom □□■
         }
+    }
 
+    @Override
+    public int getVal(int x, int y) {
+        return field[x][y].getVal();
     }
 
     /**
@@ -204,41 +239,16 @@ public class MBoard implements Board {
     /**
      * Gives the value from a field read from the screenshot back as state
      *
-     * @param x why are you reading this?
-     * @param y you seriously should understand it
+     * @param col why are you reading this?
+     * @param row you seriously should understand it
      * @return the state
      */
-    private State read(int x, int y) {
-        switch (board.getRGB(x * BLOCK_SIDE, y * BLOCK_SIDE)) {
-            case BLOCK_EMPTY:
-                return State.BLOCK_EMPTY; // Put BLOCK_EMPTY out of order since it will happen most often
-            case BLOCK_ONE:
-                return State.BLOCK_ONE;
-            case BLOCK_TWO:
-                return State.BLOCK_TWO;
-            case BLOCK_THREE:
-                return State.BLOCK_THREE;
-            case BLOCK_FOUR:
-                return State.BLOCK_FOUR;
-            case BLOCK_FIVE:
-                return State.BLOCK_FIVE;
-            case BLOCK_SIX:
-                return State.BLOCK_SIX;
-            case BLOCK_SEVEN:
-                return State.BLOCK_SEVEN;
-            case BLOCK_EIGHT:
-                return State.BLOCK_EIGHT;
-            case BLOCK_FLAG:
-                return State.BLOCK_FLAG;
-            case BLOCK_MINE_EXPLODED:
-                return State.BLOCK_MINE_EXPLODED;
-        }
-
-        return State.BLOCK_CLOSED;
+    private State read(int col, int row) {
+        int rgb = board.getRGB(col * BLOCK_SIDE_X + BLOCK_SIDE_X / 2 + (col >= 4 ? 1 : 0), row * BLOCK_SIDE_Y + BLOCK_SIDE_Y / 2);
+        return State.fromRGB(rgb);
     }
 
     public void end() {
-        robot.mouseMove(initialMousePosition.x, initialMousePosition.y);
     }
 
     /**
@@ -247,14 +257,29 @@ public class MBoard implements Board {
      * @param capture the screenshot
      * @return ZeroPoint
      */
-    private Point findZero(BufferedImage capture) {
-        for (int x = 0; x < capture.getWidth() - BLOCK_SIDE; x++) {
-            heightLoop:
-            for (int y = 0; y < capture.getHeight() - BLOCK_SIDE; y++) {
-                if (capture.getRGB(x, y) == BLOCK_CLOSED[0]) {
-                    for (int i = 1; i < BLOCK_SIDE; i++) {
-                        if (capture.getRGB(x + i, y) != BLOCK_CLOSED[i]) continue heightLoop;
+    private Point findZero(BufferedImage capture) throws IOException {
+        InputStream resourceAsStream = this.getClass().getClassLoader().getResourceAsStream("fb.png");
+        BufferedImage fbImage = ImageIO.read(resourceAsStream);
+        Point p = findInclusion(capture, fbImage);
+        if (p == null) return null;
+        // 102 19
+        // 55 63
+        //-47 44
+        return new Point (p.x - 47, p.y + 44);
+    }
+
+    private Point findInclusion(BufferedImage capture, BufferedImage fbImage) {
+        for ( int x = 0; x < capture.getWidth() - fbImage.getWidth(); x++) {
+            for (int y = 0; y < capture.getHeight() - fbImage.getHeight(); y++) {
+                boolean found = true;
+                for (int i = 0; i < fbImage.getWidth(); i++) {
+                    for (int j = 0; j < fbImage.getHeight(); j++) {
+                        if (!close(capture.getRGB(x + i, y + j), fbImage.getRGB(i, j))) {
+                            found = false;
+                        }
                     }
+                }
+                if (found) {
                     return new Point(x, y);
                 }
             }
@@ -262,67 +287,43 @@ public class MBoard implements Board {
         return null;
     }
 
-    /**
-     * Calculates how many columns the game has
-     *
-     * @param capture the screenshot
-     * @param start   the starting point for looking
-     * @return the amount of columns
-     */
-    private int calculateCountColumn(BufferedImage capture, Point start) {
-        int blocks = 0;
-        for (int i = start.x; i < capture.getWidth() - BLOCK_SIDE; i += BLOCK_SIDE) {
-            for (int j = 1; j < BLOCK_SIDE; j++) {
-                if (capture.getRGB(i + j, start.y) != BLOCK_CLOSED[j]) return blocks;
-            }
-            blocks++;
-        }
-        return blocks;
+    private boolean close(int rgb1, int rgb2) {
+        int red1 = (rgb1 >> 16) & 0xff;
+        int green1 = (rgb1 >> 8) & 0xff;
+        int blue1 = (rgb1) & 0xff;
+        int red2 = (rgb2 >> 16) & 0xff;
+        int green2 = (rgb2 >> 8) & 0xff;
+        int blue2 = (rgb2) & 0xff;
+        return Math.sqrt(Math.pow(red1 - red2, 2) + Math.pow(green1 - green2, 2) + Math.pow(blue1 - blue2, 2)) < 40;
     }
 
-    /**
-     * Calculates how many rows the game has
-     *
-     * @param capture the screenshot
-     * @param start   the starting point for looking
-     * @return the amount of rows
-     */
-    private int calculateCountRow(BufferedImage capture, Point start) {
-        int blocks = 0;
-        for (int i = start.y; i < capture.getHeight() - BLOCK_SIDE; i += BLOCK_SIDE) {
-            for (int j = 1; j < BLOCK_SIDE; j++) {
-                if (capture.getRGB(start.x + j, i) != BLOCK_CLOSED[j]) return blocks;
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (int x = 0; x < getCountRow(); x++) {
+            for (int y = 0; y < getCountColumn(); y++) {
+
+                switch (getField(y, x)) {
+                    case BLOCK_EMPTY:sb.append("□   ");break;
+                    case BLOCK_CLOSED:sb.append("■   ");break;
+                    case BLOCK_ONE:sb.append("1   ");break;
+                    case BLOCK_TWO:sb.append("2   ");break;
+                    case BLOCK_THREE:sb.append("3   ");break;
+                    case BLOCK_FOUR:sb.append("4   ");break;
+                    case BLOCK_FIVE:sb.append("5"   );break;
+                    case BLOCK_SIX:sb.append("6   ");break;
+                    case BLOCK_SEVEN:sb.append("7   ");break;
+                    case BLOCK_EIGHT:sb.append("8   ");break;
+                    case BLOCK_FLAG:sb.append("F   ");break;
+                    case OPEN_ME:sb.append("O   ");break;
+                    case FLAG_ME:sb.append("M   ");break;
+                    case BLOCK_MINE_EXPLODED:sb.append("X   ");break;
+                }
             }
-            blocks++;
+            sb.append("\n");
         }
-        return blocks;
-    }
-
-    /*
-    Debugging Methods
-     */
-
-    /**
-     * Prints the RGB Code used for identification for a field as java code
-     */
-    static void printRGBCodeForImage(String name) {
-        try {
-            BufferedImage closedSquare = ImageIO.read(new File("resources/" + name + ".png"));
-            StringBuilder sb = new StringBuilder("static final int[] BLOCK_");
-            sb.append(name.toUpperCase());
-            sb.append(" = {");
-            for (int i = 0; i < BLOCK_SIDE; i++) {
-                sb.append(closedSquare.getRGB(i, 0));
-                sb.append(",");
-            }
-            sb.setLength(sb.length() - 1);
-            sb.append("};");
-            System.out.println(sb);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+        return sb.toString();
     }
 
 }
