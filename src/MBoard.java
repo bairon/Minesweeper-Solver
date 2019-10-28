@@ -311,7 +311,7 @@ public class MBoard implements Board {
                     case BLOCK_TWO:sb.append("2   ");break;
                     case BLOCK_THREE:sb.append("3   ");break;
                     case BLOCK_FOUR:sb.append("4   ");break;
-                    case BLOCK_FIVE:sb.append("5"   );break;
+                    case BLOCK_FIVE:sb.append("5   ");break;
                     case BLOCK_SIX:sb.append("6   ");break;
                     case BLOCK_SEVEN:sb.append("7   ");break;
                     case BLOCK_EIGHT:sb.append("8   ");break;

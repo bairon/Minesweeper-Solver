@@ -41,7 +41,7 @@ public class SolverImpl implements Solver {
                     }
                 }
 
-                System.out.println("\nRound: " + times);
+                //System.out.println("\nRound: " + times);
 
                 for (int x = 0; x < board.getCountColumn(); x++) {
                     for (int y = 0; y < board.getCountRow(); y++) {
@@ -78,14 +78,14 @@ public class SolverImpl implements Solver {
 
         // First: flag as much as we can
         if (countMinesAround == countClosed + countAlreadyFlagged) {
-            System.out.println("  Flag: " + board.getVal(x, y) + " at (" + (x + 1) + "/" + (y + 1) + ")");
+            //System.out.println("  Flag: " + board.getVal(x, y) + " at (" + (x + 1) + "/" + (y + 1) + ")");
             board.flagSurrounding(x, y);
             countAlreadyFlagged = getSurroundingByType(x, y, State.BLOCK_FLAG);
         }
 
         // Second: open the ones around
         if (countMinesAround == countAlreadyFlagged) {
-            System.out.println("  Open: " + board.getVal(x, y) + " at (" + (x + 1) + "/" + (y + 1) + ")");
+            //System.out.println("  Open: " + board.getVal(x, y) + " at (" + (x + 1) + "/" + (y + 1) + ")");
             board.openSurrounding(x, y);
         }
 
